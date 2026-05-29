@@ -1,0 +1,189 @@
+---
+import type { ApiData } from "../../interfaces/dbData";
+import { MenuHeader } from "./MenuHeader";
+import { RedesIcons } from "../RedesIcons";
+import ButtonContent from "../button/ButtonContent";
+
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+// Realiza la llamada a la API
+const response = await fetch(`${UrlApi}/${KetApi}`);
+const data: ApiData = await response.json();
+
+const onePages = data.widgets.onePages;
+
+let open = false;
+---
+
+<style>
+  .cortehead {
+    clip-path: polygon(88% 0, 100% 100%, 0 100%, 0 0);
+  }
+
+  .headbuton {
+    --border: 5px; /* the border width */
+    --slant: 0.7em; /* control the slanted corners */
+
+    border: none;
+    clip-path: polygon(
+      0 0,
+      calc(100% - var(--slant)) 0,
+      100% var(--slant),
+      100% 100%,
+      var(--slant) 100%,
+      0 calc(100% - var(--slant))
+    );
+  }
+</style>
+
+<header class="z-[10] top-0 w-full">
+  <div class="md:w-100 flex justify-around items-center bg-primary">
+    <div
+      class="md:w-[35%] w-1/2 md:-ml-[22%] -ml-[19%] h-full bg-tertiary cortehead"
+    >
+      <ul class="flex items-center justify-end space-x-4 md:my-5 my-4">
+        <li
+          class="text-white md:text-[17px] text-[16px] md:block md:mr-28 mr-3"
+        >
+          <span class="pr-3 flex items-center text-[14px] md:text-[18px]">
+            <i class="fa-solid fa-location-dot 8px text-white mr-2 space-x-5"
+            ></i>
+            {data.dataGeneral.location[0].city}
+          </span>
+        </li>
+      </ul>
+    </div>
+
+    <div>
+      <ul class="md:flex hidden justify-center space-x-7 my-2">
+        <RedesIcons
+          textColor="text-white bg-black p-2 rounded-full w-12 flex justify-center items-center h-12"
+          redesSociales={data?.redesSociales}
+
+        />
+      </ul>
+    </div>
+  </div>
+
+  <div class="flex">
+    <div class="md:flex w-[65%] lg:w-[85%] mx-auto justify-center items-center">
+      <div class="w-full md:w-[40%] lg:w-[30%]">
+        <picture>
+          <img
+            src={data.logos.primary}
+            alt={`logo ${data?.name}`}
+            loading="eager"
+            class="w-[100%] md:w-[100%] mx-auto my-0 md:my-5"
+            width="300"
+            height="200"
+          />
+        </picture>
+      </div>
+      <div class="flex space-x-3 w-full mx-auto justify-center">
+        {
+          data.dataGeneral.phones.slice(0, 2)?.map((item) => (
+            <div class="hidden w-[35%] text-secondary lg:flex mx-auto justify-center">
+              <div class="w-[20%] self-center mr-5">
+                <i class="fa-solid fa-phone text-[35px] borderColor border-btnHover border-[3px] p-2" />
+              </div>
+              <div>
+                <a href={`tel:+1${item.number}`}>
+                  <h5 class="text-[21px]  text-black">{item.number}</h5>
+                  <p class="-mb-3 text-black">
+                    {item.title.length > 0 ? item.title : "Phone Number"}
+                  </p>
+                </a>
+              </div>
+            </div>
+          ))
+        }
+
+        <div
+          class="hidden w-[45%] text-secondary lg:flex mx-auto justify-center"
+        >
+          <div class="w-[20%] self-center mr-5">
+            <i
+              class="fa-solid fa-calendars text-[35px] border-btnHover border-[3px] p-2"
+            ></i>
+          </div>
+          <div>
+            <h5 class="text-[21px]  text-black">
+              {data.dataGeneral.openingHours[0].days}
+            </h5>
+
+            <p class="-mb-3 text-black">
+              {
+                data.dataGeneral.openingHours?.[1]?.days.length > 0
+                  ? data.dataGeneral.openingHours?.[0]?.hours
+                  : "Work Days"
+              }
+            </p>
+          </div>
+        </div>
+        <div
+          class="hidden w-[40%] text-secondary lg:flex mx-auto justify-center"
+        >
+          <div class="w-[20%] self-center mr-3">
+            <i
+              class="fa-solid fa-clock-nine text-[35px] borderColor border-btnHover border-[3px] p-2"
+            ></i>
+          </div>
+          <div>
+            <h5 class="text-[21px] text-black">
+              {
+                data.dataGeneral.openingHours?.[1]?.days.length > 0
+                  ? data.dataGeneral.openingHours?.[1]?.days
+                  : data.dataGeneral.openingHours?.[0]?.hours
+              }
+            </h5>
+            <p class="-mb-3 text-black">
+              {
+                data.dataGeneral.openingHours?.[1]?.hours.length > 0
+                  ? data.dataGeneral.openingHours?.[1]?.hours
+                  : "Work Hours"
+              }
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="bg-black px-3 md:px-0 py-0 md:w-[80%] mx-auto md:-mt-6 md-0 rounded-bl-2xl rounded-tr-2xl"
+  >
+    <div
+      class="flex md:flex-row flex-row-reverse justify-between md:justify-between items-center"
+    >
+      <nav class="md:flex hidden pl-5 text-white text-[18px]">
+        <MenuHeader client:load data={data} />
+      </nav>
+
+      <div
+        class="hidden bg-tertiary md:flex w-[35%] lg:w-[18%] justify-center items-center bg-center bg-contain bg-no-repeat py-4 headbuton"
+      >
+        <a href={`/${"contact"}`}>
+          <span class="capitalize text-white text-[20px] font-semibold">
+            {"Get a quote"}
+          </span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="bg-tertiary px-3 md:px-0 md:py-0 py-2 md:w-[80%] mx-auto md:-mt-6 md-0"
+  >
+    <div
+      class="flex md:flex-row flex-row-reverse justify-between md:justify-between items-center"
+    >
+      <div class="flex self-center md:hidden w-[30%] justify-center text-white">
+        <MenuHeader client:load data={data}  />
+      </div>
+
+      <div class="block md:hidden">
+        <ButtonContent />
+      </div>
+    </div>
+  </div>
+</header>

@@ -1,0 +1,58 @@
+---
+import type { ApiData } from "../../interfaces/dbData";
+import ContactForm from "../Blocks/contact/ContactForm";
+import LazyImage from "../LazyImage";
+import ButtonContent_2 from "../button/ButtonContent_2";
+
+interface Props {
+  image: string;
+  title?: string;
+  text: string;
+  namebutton: string;
+  btnNumber: string;
+}
+
+const { image, title, text, namebutton, btnNumber } = Astro.props;
+
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+const response = await fetch(`${UrlApi}/${KetApi}`);
+const data: ApiData = await response.json();
+---
+
+<div
+  class="py-10 relative before:absolute before:z-10 before:w-full before:h-full before:top-0 before:left-0 before:bg-black/60 flex flex-col justify-center items-center"
+>
+  <div class="absolute w-full h-full">
+    <LazyImage
+      src={image}
+      alt={"images about"}
+      height={350}
+      className="w-full h-full object-cover object-center"
+      imgLoading="eager"
+      client:load
+    />
+  </div>
+  <div
+    class="flex md:w-[80%] mx-auto w-[95%] h-full items-center md:flex-row flex-col relative z-10"
+  >
+    <div class="flex flex-col md:w-[50%] p-6 gap-6 md:text-start text-center">
+      <h1 class="md:text-[46px] text-[36px] font-bold text-white capitalize">
+        {title}
+      </h1>
+      <p class="text-white">
+        {text}
+      </p>
+      <ButtonContent_2
+        titleBtn={namebutton}
+        linkBtn={`tel:+1${btnNumber}`}
+      />
+    </div>
+    <div class="md:w-[50%] w-full">
+      <div class="md:w-[75%] mx-auto bg-white rounded-lg py-4">
+        <h2 class="text-3xl font-bold text-center">Get In Touch!</h2>
+        <ContactForm dataGlobal={data} />
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,20 @@
+---
+interface Props {
+  titleBtn: string;
+  linkBtn: string;
+}
+
+const { titleBtn, linkBtn } = Astro.props;
+---
+
+<div>
+  <button class="btnStyle2">
+    <a href={`${linkBtn}`}>
+      {titleBtn}
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </a>
+  </button>
+</div>

@@ -1,0 +1,283 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import type {
+  Blog,
+  DescriptionBlock,
+  BlogsListResponse,
+} from "../../interfaces/blogModel";
+import type { ApiData } from "../../interfaces/dbData";
+import FormatText from "@/hook/FormatText";
+
+const PUBLIC_BLOGS_UID = "api-blog-fmHnH4xfuNCuiGutCqQ3B7RzjJD2";
+const BLOG_API_URL = String(import.meta.env.BLOG_API_URL || "");
+let API_URL = String(import.meta.env.API_URL || "");
+
+// Fetch global site data (logos, name, colors)
+let siteData: ApiData | null = null;
+try {
+  const resp = await fetch(API_URL);
+  if (resp.ok) siteData = (await resp.json()) as ApiData;
+} catch (e) {
+  console.warn("Unable to fetch site data:", e);
+}
+
+const { slug } = Astro.params;
+const slugStr = String(slug || "");
+
+// Fetch by slug (backend requires clientId); fallback to search, then refine
+let blog: Blog | null = null;
+try {
+  // 1) Search to discover clientId for the slug
+  const searchUrl = `${BLOG_API_URL}?uid=${encodeURIComponent(PUBLIC_BLOGS_UID)}&page=1&limit=1&q=${encodeURIComponent(slugStr)}`;
+  const resSearch = await fetch(searchUrl);
+  if (resSearch.ok) {
+    const json = (await resSearch.json()) as BlogsListResponse;
+    const candidate = (json?.data ?? [])[0] as Blog | undefined;
+    if (candidate?.clientId) {
+      // 2) Hit slug endpoint with clientId for authoritative read
+      const u = new URL(BLOG_API_URL);
+      const detailBySlugUrl = `${u.origin}/api/blogs/public/slug/${encodeURIComponent(candidate.clientId)}/${encodeURIComponent(slugStr)}?uid=${encodeURIComponent(PUBLIC_BLOGS_UID)}`;
+      const resDetail = await fetch(detailBySlugUrl);
+      blog = resDetail.ok ? ((await resDetail.json()) as Blog) : candidate;
+    } else {
+      blog = candidate ?? null;
+    }
+  }
+} catch (e) {
+  console.error("Error fetching blog by slug:", e);
+}
+
+const formatDate = (d?: string | Date) => {
+  if (!d) return "";
+  const date = new Date(d);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+const hasBlocks =
+  Array.isArray(blog?.description) && (blog?.description?.length || 0) > 0;
+
+// Recent posts (limit 4), exclude current by slug
+let recent: Blog[] = [];
+try {
+  const listUrl = `${BLOG_API_URL}?uid=${encodeURIComponent(PUBLIC_BLOGS_UID)}&page=1&limit=4`;
+  const resRecent = await fetch(listUrl);
+  if (resRecent.ok) {
+    const json = (await resRecent.json()) as BlogsListResponse;
+    recent = (json?.data ?? []).filter(
+      (b) =>
+        (b.slug || (b.seoTitle ? FormatText(String(b.seoTitle)) : b._id)) !==
+        slugStr
+    );
+  }
+} catch (e) {
+  console.warn("Unable to fetch recent blogs:", e);
+}
+---
+
+<Layout
+  title={blog?.seoTitle ?? "Blog"}
+  description={blog?.metadescription ?? ""}
+  keywords={blog?.keywords ?? ""}
+  featuredImage={blog?.featureimage ?? ""}
+  favicon={siteData?.logos?.favicon ?? ""}
+>
+  <div>
+    <header
+      class="bg-primary text-white min-h-[35vh] md:min-h-[50vh] lg:min-h-[65vh] flex items-end overflow-hidden"
+    >
+      <div class="mx-auto max-w-5xl w-full px-4 pt-8 md:pt-12 pb-14 md:pb-24 text-center">
+        <h1
+          class="text-3xl md:text-5xl font-extrabold tracking-tight break-words"
+        >
+          {blog?.seoTitle ?? blog?.slug ?? "Untitled"}
+        </h1>
+        <div class="mt-3 flex flex-wrap items-center justify-center gap-3 text-white/90">
+          {
+            blog?.publishDate ? (
+              <span class="inline-flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="h-4 w-4"
+                >
+                  <path d="M7 0a1 1 0 011 1v1h8V1a1 1 0 112 0v1h1a3 3 0 013 3v14a3 3 0 01-3 3H3a3 3 0 01-3-3V5a3 3 0 013-3h1V1a1 1 0 012 0v1zm14 8H2v11a1 1 0 001 1h17a1 1 0 001-1V8z" />
+                </svg>
+                {formatDate(blog.publishDate)}
+              </span>
+            ) : null
+          }
+          {
+            blog?.category ? (
+              <span class="inline-flex items-center gap-2">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="h-4 w-4"
+                >
+                  <path d="M12 0L24 7.5 12 15 0 7.5 12 0zm0 17.5L24 10l-12 7.5L0 10l12 7.5z" />
+                </svg>
+                {blog.category}
+              </span>
+            ) : null
+          }
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-12 overflow-x-hidden">
+      <div class="flex flex-col lg:flex-row gap-10 overflow-x-hidden">
+        <div class="lg:flex-[2] min-w-0">
+          {
+            blog ? (
+              <article class="break-words overflow-x-hidden">
+                
+
+                {hasBlocks ? (
+                  <section class="space-y-5 leading-relaxed text-gray-800 break-words">
+                    {blog!.description!.map((block: DescriptionBlock) =>
+                      block.type === "titleh1" ? (
+                        <h1 class="text-4xl font-bold my-4 break-words">
+                          {String(block.value)}
+                        </h1>
+                      ) : block.type === "titleh2" ? (
+                        <h2 class="text-3xl font-semibold my-3 break-words">
+                          {String(block.value)}
+                        </h2>
+                      ) : block.type === "titleh3" ? (
+                        <h3 class="text-2xl font-semibold my-2 break-words">
+                          {String(block.value)}
+                        </h3>
+                      ) : block.type === "titleh4" ? (
+                        <h4 class="text-xl font-semibold my-2 break-words">
+                          {String(block.value)}
+                        </h4>
+                      ) : block.type === "text" ? (
+                        <p class="my-2 whitespace-pre-wrap break-words" set:html={String(block.value)}></p>
+                      ) : block.type === "img" ? (
+                        <img
+                          src={String(block.value)}
+                          alt={block.alt ?? "Blog Image"}
+                          class="w-full h-auto object-contain rounded-xl my-3"
+                          loading="lazy"
+                        />
+                      ) : block.type === "list" ? (
+                        <ul class="list-disc pl-6 my-3 space-y-1 break-words">
+                          {Array.isArray(block.value) ? (
+                            (block.value as any[]).map((item) => (
+                              <li>{String(item)}</li>
+                            ))
+                          ) : (
+                            <li>{String(block.value)}</li>
+                          )}
+                        </ul>
+                      ) : block.type === "video" ? (
+                        <div class="my-4 overflow-hidden rounded-xl">
+                          <video
+                            controls
+                            src={String(block.value)}
+                            class="w-full h-auto rounded-xl bg-black"
+                          />
+                        </div>
+                      ) : (
+                        <div class="text-sm text-gray-500">
+                          {JSON.stringify(block)}
+                        </div>
+                      )
+                    )}
+                  </section>
+                ) : (
+                  <p class="text-gray-600">
+                    No content available for this post.
+                  </p>
+                )}
+
+                <div class="mt-10">
+                  <a
+                    href="/blog"
+                    class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      class="h-5 w-5"
+                    >
+                      <path d="M15.78 4.22a.75.75 0 010 1.06L10.06 11l5.72 5.72a.75.75 0 11-1.06 1.06l-6.25-6.25a.75.75 0 010-1.06l6.25-6.25a.75.75 0 011.06 0z" />
+                    </svg>
+                    Back to blog
+                  </a>
+                </div>
+              </article>
+            ) : (
+              <p class="text-gray-600">Post not found.</p>
+            )
+          }
+        </div>
+        <aside class="lg:flex-1 min-w-0 lg:sticky lg:top-8 overflow-x-hidden">
+          <div class="space-y-6 overflow-x-hidden">
+            <section
+              class="rounded-2xl bg-gradient-to-br from-white to-gray-50 p-0 shadow-lg ring-2 ring-gray-200/50 max-h-[calc(100vh-2rem)] overflow-y-auto overflow-x-hidden"
+            >
+              <div class="sticky top-0 z-10 bg-gradient-to-r from-primary/10 to-secondary/10 backdrop-blur supports-[backdrop-filter]:bg-white/90 border-b border-gray-200 px-6 py-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5 text-primary">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                  </svg>
+                  Recent Posts
+                </h3>
+              </div>
+              <ul class="divide-y divide-gray-100">
+                {
+                  recent.length ? (
+                    recent.map((r) => (
+                      <li>
+                        <a
+                          href={`/blog/${r.slug || (r.seoTitle ? FormatText(String(r.seoTitle)) : r._id)}`}
+                          class="group flex w-full gap-3 px-4 py-4 hover:bg-gradient-to-r hover:from-primary/5 hover:to-secondary/5 transition-all duration-200 ring-1 ring-transparent hover:ring-primary/20 rounded-lg mx-2 my-1"
+                        >
+                          <div class="h-16 w-20 overflow-hidden rounded-lg bg-gray-100 ring-2 ring-gray-200 flex-shrink-0 shadow-sm">
+                            {r.featureimage ? (
+                              <img
+                                src={r.featureimage}
+                                alt={r.seoTitle ?? "thumb"}
+                                class="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-200"
+                                loading="lazy"
+                              />
+                            ) : null}
+                          </div>
+                          <div class="min-w-0 flex-1">
+                            <p class="text-sm font-medium text-gray-900 group-hover:text-primary line-clamp-2 leading-tight">
+                              {r.seoTitle ?? r.slug ?? "Untitled"}
+                            </p>
+                            <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-3 w-3">
+                                <path d="M7 0a1 1 0 011 1v1h8V1a1 1 0 112 0v1h1a3 3 0 013 3v14a3 3 0 01-3 3H3a3 3 0 01-3-3V5a3 3 0 013-3h1V1a1 1 0 012 0v1zm14 8H2v11a1 1 0 001 1h17a1 1 0 001-1V8z"/>
+                              </svg>
+                              {r.publishDate ? formatDate(r.publishDate) : ""}
+                            </p>
+                          </div>
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="ml-auto h-5 w-5 self-center text-gray-300 group-hover:text-primary opacity-0 group-hover:opacity-100 transition-all duration-200 transform group-hover:translate-x-1">
+                            <path d="M8.22 19.78a.75.75 0 010-1.06L13.94 13 8.22 7.28a.75.75 0 111.06-1.06l6.25 6.25a.75.75 0 010 1.06l-6.25 6.25a.75.75 0 01-1.06 0z" />
+                          </svg>
+                        </a>
+                      </li>
+                    ))
+                  ) : (
+                    <li class="px-6 py-6 text-sm text-gray-500 text-center italic">No recent posts available.</li>
+                  )
+                }
+              </ul>
+            </section>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</Layout>

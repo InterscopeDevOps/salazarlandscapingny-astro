@@ -1,0 +1,145 @@
+---
+import type { ApiData, SectionsHomeAbout } from "@/interfaces/dbData";
+import Layout from "@/layouts/Layout.astro";
+import SlideShow from "@/components/TransparentHeader/SlideShow";
+import ServicesHome from "@/components/Blocks/home/ServicesHome";
+import AboutBlocks from "@/components/Blocks/home/AboutBlocks";
+import HomeBlocks from "@/components/Blocks/home/HomeBlocks";
+import SocialMediaHome from "@/components/Blocks/home/SocialMediaHome";
+import CallToAction from "@/components/Blocks/home/CallToAction";
+import ContentContact from "@/components/Blocks/home/ContenctContact";
+import ServicesComponent from "@/components/Blocks/services/ServicesComponent";
+import LazyImage from "@/components/LazyImage";
+import AreasBlockOne from "@/components/Blocks/areas-we-serve/AreasBlockOne";
+import VideoSection from "@/components/VideoSection";
+import ServicesByLocation from "@/components/areas/ServiceByLocation";
+
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+// Realiza la llamada a la API
+const response = await fetch(`${UrlApi}/${KetApi}`);
+const data: ApiData = await response.json();
+
+//filtrar para obtener la section de home
+const homeSection = data?.sectionsHomeAbout.filter(
+  (section: SectionsHomeAbout) => section.section === "home",
+);
+
+//filtrar para obtener la section de home
+const dataBlocks = data?.sectionsHomeAbout.filter(
+  (section: SectionsHomeAbout) => section.section === "blocks",
+);
+
+// informacion de telefono
+const dataPhone = data.dataGeneral.phones;
+
+//name company
+const nameCompany = data.name;
+const dataEmail = data.dataGeneral.emails;
+
+//landing services
+const landingServices = data.widgets.landingServices;
+
+// onePages
+const onePages = data.widgets.onePages;
+---
+
+<Layout
+  title={`
+  ${
+    data.landingLocations?.length! > 0
+      ? `${data.name} | ${data.landingLocations?.[0].seoTitle}`
+      : `${data.name} | Home`
+  }
+  `}
+  description={`
+    ${
+      data.landingLocations?.length! > 0
+        ? ` ${data.landingLocations?.[0].metadescription}`
+        : `${homeSection[0].text}`
+    }
+    `}
+  favicon={data.logos.primary}
+  featuredImage={`
+    ${
+      data.landingLocations?.length! > 0
+        ? ` ${data.landingLocations?.[0].feactureimage}`
+        : `${data.logos.primary}`
+    }
+    `}
+  keywords={`
+    ${
+      data.landingLocations?.length! > 0
+        ? ` ${data.landingLocations?.[0].keywords}`
+        : `${data.services.map((service) => service.title).join(", ")}`
+    }
+    `}
+>
+  <SlideShow dataBlocks={dataBlocks} dataGlobal={data} client:load />
+  <AboutBlocks dataGlobal={data} client:load />
+  <VideoSection dataBlocks={dataBlocks} data={data} client:load />
+  {
+    data.landingLocations?.length! > 0 && data.widgets.areasweserve ? (
+      <AreasBlockOne
+        title={data.landingLocations?.[0]?.description[2].title || ""}
+        text={data.landingLocations?.[0]?.description[2].text || ""}
+        nameBtn={data.landingLocations?.[0]?.description[2].textbutton || ""}
+        image={data.landingLocations?.[0]?.description[2].image || ""}
+        bgImages={data.gallery[3] || ""}
+        client:load
+      />
+    ) : null
+  }
+  <!-- <Emblems nameCompany={nameCompany} data={data} client:load /> -->
+  <ServicesByLocation data={data} client:load />
+  <SocialMediaHome dataGlobal={data} client:load />
+
+  <ServicesHome
+    dataGlobal={data}
+    homeSection={homeSection}
+    landingServices={landingServices}
+    dbServices={data.services}
+    client:load
+  />
+
+  <CallToAction
+    homeSection={homeSection}
+    nameCompany={nameCompany}
+    dataPhone={dataPhone}
+    dataEmail={dataEmail}
+    client:load
+  />
+
+  <HomeBlocks
+    homeSection={homeSection}
+    dataPhone={dataPhone}
+    onePages={onePages}
+    dataGeneral={data}
+    client:load
+  />
+  {
+    onePages && (
+      <div>
+        <ServicesComponent
+          dataServices={data.services}
+          dataPhone={dataPhone}
+          onePages={onePages}
+          client:load
+        />
+        <div class="relative">
+          <div class="bg-btnHover rounded-t-full w-11/12 md:w-1/3 py-28 md:py-32 mx-auto" />
+          <div class="bg-primary py-10 w-full" />
+          <div class="absolute top-0 right-0 left-0">
+            <LazyImage
+              src={data.logos.primary}
+              alt={data.name}
+              className="w-4/5 md:w-1/4 mx-auto"
+              client:load
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+  <ContentContact dataGlobal={data} bgImage={data.gallery[0]} client:load />
+</Layout>

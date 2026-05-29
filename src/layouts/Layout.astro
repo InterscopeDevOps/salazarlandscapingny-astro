@@ -1,0 +1,141 @@
+---
+import FootersContent from "@/components/footers/Footer2";
+import SiteDown from "../components/SiteDown2.astro";
+import UnderConstruction from "../components/UnderConstruction.astro";
+import HeaderContent from "../components/header/HeaderContent.astro";
+import ScrollToTopButton from "@/components/ScrollToTopButton";
+import FixedButtonsContent from "@/components/FixedButtonsContent";
+import AccessibilityPanel from "@/components/AccessibilityPanel";
+
+import type { ApiData } from "../interfaces/dbData";
+import BannerCarousel from "@/components/BannerMessages";
+import Chatbot from "@/components/bot/Chatbot";
+interface Props {
+  title: string;
+  description: string;
+  keywords: string;
+  featuredImage: string;
+  favicon: string;
+}
+
+const { title, description, keywords, featuredImage, favicon } = Astro.props;
+
+// Realiza la llamada a la API
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+// Realiza la llamada a la API
+const response = await fetch(`${UrlApi}/${KetApi}`);
+const data: ApiData = await response.json();
+
+const { url } = Astro.request;
+const domain = new URL(url).origin;
+const isLocalhost = domain.includes("localhost");
+const isSubdomainVercel = domain.includes("vercel.app");
+const isSubdomainNetlify = domain.includes("netlify.app");
+
+// console.log("Under Construction:", data.widgets.underConstrution);
+// console.log("Site Down:", data.widgets.siteDown);
+---
+
+<!doctype html>
+<html lang="en" transition:animate="slide">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <meta name="keywords" content={keywords} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={featuredImage} />
+    <meta property="og:type" content="website" />
+
+    <!-- mostrar imagen en la card al enviar -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={featuredImage} />
+    <link href="/assets/css/style.css" rel="stylesheet" />
+    <!-- Font Awesome -->
+
+    <link
+      href="https://cdn.jsdelivr.net/gh/yader316/cdn-font-pro@main/fontawesome-pro-6.5.2-web/css/all.min.css"
+      rel="stylesheet"
+    />
+    <!-- before & after -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/img-comparison-slider@7/dist/styles.css"
+    />
+    <script defer src="https://unpkg.com/img-comparison-slider@7/dist/index.js"
+    ></script>
+
+    <script
+      src="https://cdn.jsdelivr.net/gh/InspiredDevops/inspired-components/review-widget.js"
+      type="module"
+      defer></script>
+    <!-- <ViewTransitions /> -->
+  </head>
+  <body
+    style={{
+      "--btn-border-color": data.colors.btnHoverColor,
+      "--btn-hover-color": data.colors.btnHoverColor,
+      "--primary": data.colors.primaryColor,
+      "--secondary": data.colors.secondaryColor,
+      "--tertiary": data.colors.tertiaryColor,
+      "--fourth": data.colors.fourthColor,
+      "--title": data.colors.titleColor,
+      "--text": data.colors.textColor,
+      "--btn-color": data.colors.btnColor,
+    }}
+  >
+    {
+      !isLocalhost &&
+      !isSubdomainVercel &&
+      !isSubdomainNetlify &&
+      data.widgets.underConstrution ? (
+        <UnderConstruction />
+      ) : data.widgets.siteDown ? (
+        <SiteDown />
+      ) : (
+        <div id="site-content">
+          <BannerCarousel dataGlobal={data} />
+          <div class="relative z-40">
+            <HeaderContent />
+          </div>
+          <main>
+            <slot />
+          </main>
+          <FootersContent dataGlobal={data} client:load />
+          <FixedButtonsContent dataGlobal={data} client:load />
+          <AccessibilityPanel client:load />
+          <ScrollToTopButton client:only />
+        </div>
+      )
+    }
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/gh/CodexRob/emailcdn@main/index-06e7f5fd.min.js"
+      defer></script>
+    <!-- elfsigth -->
+    <script
+      src="https://static.elfsight.com/platform/platform.js"
+      data-use-service-core
+      defer></script>
+
+    <script>
+      // Carga asincrónica de los estilos no críticos después de que la página haya cargado
+      function loadDeferredCSS() {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href =
+          "https://cdn.jsdelivr.net/gh/eliyantosarage/font-awesome-pro@main/fontawesome-pro-6.5.1-web/css/all.min.css";
+        document.head.appendChild(link);
+      }
+      // Llama a la función para cargar los estilos no críticos después de que la página haya cargado
+      window.addEventListener("load", loadDeferredCSS);
+    </script>
+  </body>
+</html>

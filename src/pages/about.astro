@@ -1,0 +1,63 @@
+---
+import TransparentHeader from "@/components/TransparentHeader/TransparentHeader";
+import type { ApiData, SectionsHomeAbout } from "../interfaces/dbData";
+import Layout from "../layouts/Layout.astro";
+import ValuesAbout from "@/components/Blocks/about/ValuesAbout";
+import SocialMediaHome from "@/components/Blocks/home/SocialMediaHome";
+import AboutsBlock2 from "@/components/Blocks/about/AboutBlock2";
+
+// Importar la URL de la API y la Key de la API
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+// Realiza la llamada a la API
+const response = await fetch(`${UrlApi}/${KetApi}`);
+const data: ApiData = await response.json();
+
+//filtrar para obtener la section de about
+const aboutSection = data?.sectionsHomeAbout.filter(
+  (section: SectionsHomeAbout) => section.section === "about",
+);
+
+//filtrar para obtener la section de blocks
+const dataBlocks = data?.sectionsHomeAbout.filter(
+  (section: SectionsHomeAbout) => section.section === "blocks",
+);
+
+// nombre de la empresa
+const nameCompany = data?.name;
+
+// telefono de la empresa
+const dbPhone = data.dataGeneral.phones;
+
+const landingServices = data.widgets.landingServices;
+---
+
+<Layout
+  title={`${data.name} | About Us`}
+  description={dataBlocks[1]?.text}
+  favicon={data.logos.primary}
+  featuredImage={data.logos.favicon}
+  keywords={data.services.map((service) => service.title).join(", ")}
+>
+  <TransparentHeader
+    bgImages={dataBlocks[1]?.additionalImages[0]}
+    title={dataBlocks[1]?.title || "About Us"}
+    client:load
+  />
+  <AboutsBlock2
+    title={aboutSection[0].title}
+    text={aboutSection[0].text}
+    image={aboutSection[0].additionalImages[0]}
+    bgImages={aboutSection[0].additionalImages[1]}
+    nameCompany={nameCompany || ""}
+    client:load
+  />
+  <SocialMediaHome dataGlobal={data} client:load />
+
+  <ValuesAbout
+    dataGlobal={data}
+    homeSection={aboutSection}
+    dataPhone={dbPhone}
+    client:load
+  />
+</Layout>

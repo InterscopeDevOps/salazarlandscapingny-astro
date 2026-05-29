@@ -1,0 +1,66 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+import type { ApiData, LandingsGallery } from "../../interfaces/dbData";
+import EliminarCaracteresEspeciales from "@/hook/EliminarCaracteresEspeciales";
+import TransparentHeader from "@/components/TransparentHeader/TransparentHeader";
+import GalleryComponent from "@/components/Blocks/gallery/GalleryComponent";
+
+const { slug } = Astro.params;
+
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+// Realiza la llamada a la API
+const response = await fetch(`${UrlApi}/${KetApi}`);
+// Obtiene la respuesta de la API
+const data: ApiData = await response.json();
+
+//traer la mision
+const whyChooseUsInfo = data.valuesContent.whychooseUs;
+
+const landingGalleryInfo = data?.landingsGallery.find(
+  (gallery: LandingsGallery) => {
+    const gallerySlug = EliminarCaracteresEspeciales(gallery.nameLanding);
+    const targetSlug = EliminarCaracteresEspeciales(slug || "");
+
+    return gallerySlug === targetSlug;
+  },
+);
+
+// El nombre del landing que quieres mostrar
+const specificLandingName = landingGalleryInfo?.nameLanding;
+
+// Filtrar para obtener el landing específico
+const specificLandingGallery = data.landingsGallery.find(
+  (gallery) => gallery.nameLanding === specificLandingName,
+);
+
+// Verificar si el landing específico existe y extraer sus imágenes
+const imagesArray: string[] = specificLandingGallery
+  ? specificLandingGallery.imgLanding
+  : [];
+---
+
+<Layout
+  title={`${data?.name} | ${landingGalleryInfo?.nameLanding}`}
+  description={`${whyChooseUsInfo}`}
+  keywords={`${landingGalleryInfo?.nameLanding}, ${data?.name}`}
+  featuredImage={`${landingGalleryInfo?.imgLanding[0]}`}
+  favicon={data.logos.primary}
+>
+  <TransparentHeader
+    bgImages={`${landingGalleryInfo?.imgLanding[0]}`}
+    title={`${landingGalleryInfo?.nameLanding}`}
+    client:load
+  />
+  <div class="pt-10 pb-36 w-4/5 mx-auto">
+    <h2 class="text-center text-5xl font-bold mt-10 mb-5">Our Gallery</h2>
+    <div
+      class="border-b-2 border-[#EBECE9] mb-5 relative before:absolute before:w-1/3 before:mx-auto before:bg-btnHover before:h-1 before:left-0 before:right-0 before:top-0"
+    >
+    </div>
+    <div class="py-10">
+      <GalleryComponent  dataGallery={imagesArray} client:load />
+    </div>
+  </div>
+</Layout>

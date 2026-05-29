@@ -1,0 +1,27 @@
+---
+import TransparentHeader from "@/components/TransparentHeader/TransparentHeader";
+import type { ApiData } from "../interfaces/dbData";
+import Layout from "../layouts/Layout.astro";
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+// Realiza la llamada a la API
+const response = await fetch(`${UrlApi}/${KetApi}`);
+const data: ApiData = await response.json();
+
+
+const valuesMision = data.valuesContent.mission;
+---
+
+<Layout
+    title={`${data.name} | Color Palette`}
+    description={valuesMision}
+    favicon={data.logos.primary}
+    featuredImage={data.logos.favicon}
+    keywords="Color Palette, Design, Web Development"
+>
+    <TransparentHeader
+        bgImages={data.gallery[0]}
+        title="Color Palette"
+        client:load
+    />
+</Layout>

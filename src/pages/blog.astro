@@ -1,0 +1,434 @@
+---
+import Layout from "../layouts/Layout.astro";
+import type { BlogsListResponse, Blog } from "../interfaces/blogModel";
+import type { ApiData, SectionsHomeAbout } from "../interfaces/dbData";
+import FormatText from "@/hook/FormatText";
+import TransparentHeader from "@/components/TransparentHeader/TransparentHeader";
+
+const PUBLIC_BLOGS_UID = "api-blog-fmHnH4xfuNCuiGutCqQ3B7RzjJD2";
+const BLOG_API_URL = String(import.meta.env.BLOG_API_URL || "");
+let API_URL = String(import.meta.env.API_URL || "");
+let KetApi = import.meta.env.API_KEY;
+
+// Fetch global site data (logos, name, colors)
+// Realiza la llamada a la API
+const response = await fetch(`${API_URL}/${KetApi}`);
+const siteData: ApiData = await response.json();
+
+// Query params for pagination, search and layout view
+const url = new URL(Astro.request.url);
+const page = url.searchParams.get("page") || "1";
+const q = url.searchParams.get("q") || "";
+const view = (url.searchParams.get("view") || "grid").toLowerCase(); // grid | list
+
+let fetchUrl = `${BLOG_API_URL}?uid=${encodeURIComponent(PUBLIC_BLOGS_UID)}&page=${encodeURIComponent(
+  page
+)}&limit=10`;
+if (q) fetchUrl += `&q=${encodeURIComponent(q)}`;
+
+let blogs: Blog[] = [];
+let pagination = { total: 0, page: 1, pages: 1, limit: 10 };
+
+try {
+  const res = await fetch(fetchUrl);
+  if (res.ok) {
+    const json = (await res.json()) as BlogsListResponse;
+    blogs = json?.data ?? [];
+    pagination = json?.pagination ?? pagination;
+  } else {
+    console.warn("Blog list fetch failed:", res.status, res.statusText);
+  }
+} catch (e) {
+  console.error("Error fetching blogs:", e);
+}
+
+// Build pagination pages array (compact with ellipsis)
+function buildPages(current: number, total: number) {
+  const pages: Array<number | string> = [];
+  const window = 1; // numbers to show around current
+  const firstPages = [1, 2];
+  const lastPages = [total - 1, total];
+
+  const add = (p: number | string) => {
+    if (pages[pages.length - 1] !== p) pages.push(p);
+  };
+
+  for (const p of firstPages) {
+    if (p >= 1 && p <= total) add(p);
+  }
+
+  // middle window
+  for (let p = current - window; p <= current + window; p++) {
+    if (p >= 1 && p <= total) add(p);
+  }
+
+  for (const p of lastPages) {
+    if (p >= 1 && p <= total) add(p);
+  }
+
+  // insert ellipsis
+  const compact: Array<number | string> = [];
+  for (let i = 0; i < pages.length; i++) {
+    const p = pages[i] as number;
+    if (i === 0) {
+      compact.push(p);
+    } else {
+      const prev = pages[i - 1] as number;
+      if (p - prev > 1) compact.push("…");
+      compact.push(p);
+    }
+  }
+  return compact;
+}
+
+const pageNum = Number(pagination.page || 1);
+const pagesArr = buildPages(pageNum, Math.max(1, pagination.pages || 1));
+
+// Build blog path using slug when available
+function blogPath(b: Blog): string {
+  const slug = b.slug || (b.seoTitle ? FormatText(String(b.seoTitle)) : b._id);
+  return `/blog/${slug}`;
+}
+
+const dataBlocks = siteData?.sectionsHomeAbout.filter(
+  (section: SectionsHomeAbout) => section.section === "blocks"
+);
+
+function getNextMonthName(): string {
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const today = new Date();
+  const currentMonthIndex = today.getMonth(); // 0–11
+  const nextMonthIndex = (currentMonthIndex + 1) % 12;
+
+  return monthNames[nextMonthIndex];
+}
+
+---
+
+<Layout
+  title={`Blog | ${siteData?.name ?? ""}`}
+  description={siteData?.slogan?.[0] ?? ""}
+  keywords={siteData?.services?.map((s) => s.title).join(", ") ?? ""}
+  featuredImage={siteData?.logos?.favicon ?? ""}
+  favicon={siteData?.logos?.favicon ?? ""}
+>
+  <TransparentHeader
+    title={`Blog | ${siteData?.name ?? ""}`}
+    bgImages={dataBlocks[4].additionalImages[0]}
+    client:load
+  />
+  <main class="max-w-7xl mx-auto px-4 py-12">
+    <header class="mb-8">
+      <h1
+        class="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900"
+      >
+        Blog
+      </h1>
+      <p class="mt-2 text-gray-600">Latest news, articles, and updates.</p>
+    </header>
+
+    <div
+      class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
+    >
+      <form method="get" class="flex w-full md:max-w-xl items-center gap-2">
+        <label for="blog-search-input" class="sr-only">Search articles, author or category</label>
+        <input
+          id="blog-search-input"
+          name="q"
+          value={q}
+          placeholder="Search articles, author or category..."
+          class="w-full rounded-xl border border-gray-200 bg-white/70 px-4 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+        {/* preserve current view in search */}
+        <input type="hidden" name="view" value={view} />
+        <button
+          type="submit"
+          class="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-white shadow hover:bg-primary-700 transition"
+        >
+          {/* Magnifying glass icon */}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="h-5 w-5"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z"
+            ></path></svg
+          >
+          Search
+        </button>
+        <a
+          href="/blog"
+          class="rounded-xl border border-gray-200 px-4 py-3 text-gray-700 hover:bg-gray-50"
+          >Clear</a
+        >
+      </form>
+
+      <div class="flex items-center justify-between md:justify-end gap-2">
+        <span class="text-sm text-gray-500 hidden md:inline">View</span>
+        <a
+          href={`?page=${page}${q ? `&q=${encodeURIComponent(q)}` : ""}&view=grid`}
+          class={`inline-flex items-center gap-2 rounded-lg px-3 py-2 border transition ${view === "grid" ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 hover:bg-gray-50 text-gray-700"}`}
+          aria-label="Grid view"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class="h-5 w-5"
+            ><path
+              d="M3 4.5A1.5 1.5 0 014.5 3h3A1.5 1.5 0 019 4.5v3A1.5 1.5 0 017.5 9h-3A1.5 1.5 0 013 7.5v-3zM3 13.5A1.5 1.5 0 014.5 12h3A1.5 1.5 0 019 13.5v3A1.5 1.5 0 017.5 18h-3A1.5 1.5 0 013 16.5v-3zM12 4.5A1.5 1.5 0 0113.5 3h3A1.5 1.5 0 0118 4.5v3A1.5 1.5 0 0116.5 9h-3A1.5 1.5 0 0112 7.5v-3zM12 13.5A1.5 1.5 0 0113.5 12h3a1.5 1.5 0 011.5 1.5v3A1.5 1.5 0 0116.5 18h-3a1.5 1.5 0 01-1.5-1.5v-3z"
+            ></path></svg
+          >
+          <span class="hidden sm:inline">Grid</span>
+        </a>
+        <a
+          href={`?page=${page}${q ? `&q=${encodeURIComponent(q)}` : ""}&view=list`}
+          class={`inline-flex items-center gap-2 rounded-lg px-3 py-2 border transition ${view === "list" ? "bg-gray-900 text-white border-gray-900" : "border-gray-200 hover:bg-gray-50 text-gray-700"}`}
+          aria-label="List view"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class="h-5 w-5"
+            ><path
+              d="M3.75 6.75A.75.75 0 014.5 6h15a.75.75 0 010 1.5h-15a.75.75 0 01-.75-.75zM3.75 12A.75.75 0 014.5 11.25h15a.75.75 0 010 1.5h-15a.75.75 0 01-.75-.75zM3.75 17.25a.75.75 0 01.75-.75h15a.75.75 0 010 1.5h-15a.75.75 0 01-.75-.75z"
+            ></path></svg
+          >
+          <span class="hidden sm:inline">List</span>
+        </a>
+      </div>
+    </div>
+
+    {
+      blogs.length === 0 ? (
+        <div class="rounded-2xl bg-white p-10 text-center shadow-sm">
+          <p class="text-gray-700">
+            Look forward to our first blog on the First of {getNextMonthName()}!
+          </p>
+        </div>
+      ) : (
+        <ul
+          class={
+            view === "grid"
+              ? "grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+              : "space-y-6"
+          }
+        >
+          {blogs.map((b) => (
+            <li>
+              <article
+                class={
+                  view === "grid"
+                    ? "group relative overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 hover:shadow-lg transition"
+                    : "flex flex-col md:flex-row rounded-2xl bg-white overflow-hidden shadow-sm ring-1 ring-gray-100 hover:shadow-lg transition"
+                }
+              >
+                {/* image */}
+                {b.featureimage ? (
+                  view === "grid" ? (
+                    <a href={blogPath(b)} class="block overflow-hidden">
+                      <img
+                        src={b.featureimage}
+                        alt={b.seoTitle ?? "feature"}
+                        class="h-48 w-full object-cover object-center"
+                      />
+                    </a>
+                  ) : (
+                    <div class="md:w-60 w-full h-44 md:h-auto flex-shrink-0">
+                      <img
+                        src={b.featureimage}
+                        alt={b.seoTitle ?? "feature"}
+                        class="h-full w-full object-cover"
+                      />
+                    </div>
+                  )
+                ) : (
+                  <div
+                    class={
+                      view === "grid"
+                        ? "h-48 w-full bg-gradient-to-br from-gray-100 to-gray-200"
+                        : "md:w-60 w-full h-44 bg-gradient-to-br from-gray-100 to-gray-200"
+                    }
+                  />
+                )}
+
+                {/* content */}
+                <div class={view === "grid" ? "p-6" : "p-6 flex-1"}>
+                  <a href={blogPath(b)} class="group/title">
+                    <h2 class="text-xl md:text-2xl font-semibold text-gray-900 group-hover/title:text-primary-600 transition">
+                      {b.seoTitle ?? b.slug ?? "(Untitled)"}
+                    </h2>
+                  </a>
+                  <div class="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-gray-500">
+                    {b.publishDate ? (
+                      <span class="inline-flex items-center gap-1">
+                        {/* Calendar icon */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          class="h-4 w-4"
+                        >
+                          <path d="M7 0a1 1 0 011 1v1h8V1a1 1 0 112 0v1h1a3 3 0 013 3v14a3 3 0 01-3 3H3a3 3 0 01-3-3V5a3 3 0 013-3h1V1a1 1 0 012 0v1zm14 8H2v11a1 1 0 001 1h17a1 1 0 001-1V8z" />
+                        </svg>
+                        {new Date(b.publishDate).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    ) : null}
+                  </div>
+                  {b.metadescription ? (
+                    <p class="mt-4 line-clamp-3 text-gray-700">
+                      {b.metadescription}
+                    </p>
+                  ) : null}
+                  <div class="mt-5">
+                    <a
+                      href={blogPath(b)}
+                      class="inline-flex items-center gap-2 text-primary-600 font-medium hover:underline"
+                    >
+                      Read more
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        class="h-4 w-4"
+                      >
+                        <path d="M13.5 4.5a1 1 0 011.414 0l6.586 6.586a1 1 0 010 1.414L14.914 19.086A1 1 0 0113.5 17.672L18.172 13H3a1 1 0 110-2h15.172L13.5 6.328a1 1 0 010-1.828z" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              </article>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+
+    {/* Premium pagination */}
+    <nav aria-label="Pagination" class="mt-10">
+      <div
+        class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        {/* Prev */}
+        <div>
+          {
+            pagination.page > 1 ? (
+              <a
+                href={`?page=${pagination.page - 1}${q ? `&q=${encodeURIComponent(q)}` : ""}${view ? `&view=${encodeURIComponent(view)}` : ""}`}
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="h-5 w-5"
+                >
+                  <path d="M15.78 4.22a.75.75 0 010 1.06L10.06 11l5.72 5.72a.75.75 0 11-1.06 1.06l-6.25-6.25a.75.75 0 010-1.06l6.25-6.25a.75.75 0 011.06 0z" />
+                </svg>
+                Previous
+              </a>
+            ) : (
+              <span class="inline-flex items-center gap-2 rounded-xl border border-gray-100 px-4 py-2 text-gray-400">
+                {/* disabled */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="h-5 w-5"
+                >
+                  <path d="M15.78 4.22a.75.75 0 010 1.06L10.06 11l5.72 5.72a.75.75 0 11-1.06 1.06l-6.25-6.25a.75.75 0 010-1.06l6.25-6.25a.75.75 0 011.06 0z" />
+                </svg>
+                Previous
+              </span>
+            )
+          }
+        </div>
+
+        {/* Center page numbers */}
+        <ul
+          class="inline-flex items-center gap-1 rounded-xl bg-white p-1 shadow-sm ring-1 ring-gray-100"
+        >
+          {
+            pagesArr.map((p) =>
+              typeof p === "string" ? (
+                <li class="px-3 py-2 text-gray-400">{p}</li>
+              ) : (
+                <li>
+                  <a
+                    href={`?page=${p}${q ? `&q=${encodeURIComponent(q)}` : ""}${view ? `&view=${encodeURIComponent(view)}` : ""}`}
+                    class={`min-w-[2.5rem] text-center inline-block rounded-lg px-3 py-2 text-sm transition ${p === pagination.page ? "bg-gray-900 text-white" : "hover:bg-gray-50 text-gray-700"}`}
+                    aria-current={p === pagination.page ? "page" : undefined}
+                  >
+                    {p}
+                  </a>
+                </li>
+              )
+            )
+          }
+        </ul>
+
+        {/* Next */}
+        <div class="flex justify-end">
+          {
+            pagination.page < pagination.pages ? (
+              <a
+                href={`?page=${pagination.page + 1}${q ? `&q=${encodeURIComponent(q)}` : ""}${view ? `&view=${encodeURIComponent(view)}` : ""}`}
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                Next
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="h-5 w-5"
+                >
+                  <path d="M8.22 19.78a.75.75 0 010-1.06L13.94 13 8.22 7.28a.75.75 0 111.06-1.06l6.25 6.25a.75.75 0 010 1.06l-6.25 6.25a.75.75 0 01-1.06 0z" />
+                </svg>
+              </a>
+            ) : (
+              <span class="inline-flex items-center gap-2 rounded-xl border border-gray-100 px-4 py-2 text-gray-400">
+                {/* disabled */}
+                Next
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  class="h-5 w-5"
+                >
+                  <path d="M8.22 19.78a.75.75 0 010-1.06L13.94 13 8.22 7.28a.75.75 0 111.06-1.06l6.25 6.25a.75.75 0 010 1.06l-6.25 6.25a.75.75 0 01-1.06 0z" />
+                </svg>
+              </span>
+            )
+          }
+        </div>
+      </div>
+      <p class="mt-3 text-center text-sm text-gray-500">
+        Page {pagination.page} of {pagination.pages}
+      </p>
+    </nav>
+  </main>
+</Layout>

@@ -1,0 +1,110 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+import type { ApiData, LandingLocation } from "../../interfaces/dbData";
+import TransparentHeaderLocation from "../../components/TransparentHeader/TransparentHeaderLocation.astro";
+import ButtonContent_2 from "@/components/button/ButtonContent_2";
+import LazyImage from "@/components/LazyImage";
+const { slug } = Astro.params;
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+const response = await fetch(`${UrlApi}/${KetApi}`);
+const data: ApiData = await response.json();
+
+// Encontrar el servicio por ID
+const location = data.landingLocations?.find(
+    (location: LandingLocation) =>
+        location.slug.replace(/\s+/g, "-").toLowerCase() === slug,
+);
+---
+
+<Layout
+    title={`${location?.seoTitle}`}
+    description={location?.metadescription!}
+    favicon={data.logos.primary}
+    featuredImage={location?.feactureimage!}
+    keywords={location?.keywords!}
+>
+    <TransparentHeaderLocation
+        title={location?.seoTitle}
+        image={location?.description[0].image!}
+        text={location?.description[0].text!}
+        namebutton={location?.description[0].textbutton!}
+        btnNumber={data.dataGeneral.phones[0].number}
+    />
+    <div class="md:w-[70%] mx-auto w-[95%] md:py-24 py-4 flex flex-wrap">
+        <div class="md:w-[100%] w-full flex flex-col md:px-6 px-2">
+            {
+                location?.description.slice(1, 10).map((item: any, index: any) => {
+                    // Determina si el índice es par o impar para alternar el orden
+                    const isEven = index % 2 === 0;
+                    return (
+                        <div
+                            class={`flex flex-wrap md:min-h-[70vh] py-10 ${isEven ? "md:flex-row flex-col-reverse" : "md:flex-row-reverse flex-col-reverse"}`}
+                        >
+                            <div class="md:w-[50%] w-full flex flex-col gap-6 self-center md:p-8">
+                                <h2 class="md:text-[40px] text-[24px] font-bold">
+                                    {item.title}
+                                </h2>
+                                <p>{item.text}</p>
+                                <ButtonContent_2
+                                    titleBtn={item.textbutton}
+                                    linkBtn={`tel:+1${data.dataGeneral.phones[0].number}`}
+                                />
+                            </div>
+                            <div class="md:w-[50%] w-full flex items-center md:p-8">
+                                <LazyImage
+                                    src={item.image}
+                                    alt={item.title}
+                                    className="w-full h-[400px] object-cover rounded-xl"
+                                    client:load
+                                />
+                            </div>
+                        </div>
+                    );
+                })
+            }
+        </div>
+
+        <div class="w-full flex flex-col md:px-6 px-2 gap-6">
+            <div>
+                <h2 class="md:text-[35px] text-[30px] font-bold text-center">
+                    Areas we Serve
+                </h2>
+            </div>
+            <div class="flex justify-center flex-wrap text-[22px] gap-6">
+                {
+                    data.landingLocations?.map((location) => (
+                        <a
+                            href={`/areas-we-serve/${location.slug
+                                .replace(/\s+/g, "-")
+                                .toLowerCase()}`}
+                        >
+                            <div
+                                class="flex flex-col py-4 px-4 rounded-xl"
+                                style={{
+                                    color:
+                                        location.slug
+                                            .replace(/\s+/g, "-")
+                                            .toLowerCase() === slug
+                                            ? "#fff"
+                                            : data.colors.primaryColor,
+                                    backgroundColor:
+                                        location.slug
+                                            .replace(/\s+/g, "-")
+                                            .toLowerCase() === slug
+                                            ? data.colors.primaryColor
+                                            : "#fff",
+                                }}
+                            >
+                                <span class="text-start font-bold capitalize">
+                                    {location.title}
+                                </span>
+                            </div>
+                        </a>
+                    ))
+                }
+            </div>
+        </div>
+    </div>
+</Layout>

@@ -1,0 +1,42 @@
+---
+import type { ApiData, SectionsHomeAbout } from "../../interfaces/dbData";
+import TransparentHeader from "@/components/TransparentHeader/TransparentHeader";
+import Layout from "../../layouts/Layout.astro";
+import GalleryComponent from "@/components/Blocks/gallery/GalleryDetail";
+import GalleryBA from "@/components/Blocks/gallery/BeforeAfter"
+
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+// Realiza la llamada a la API
+const response = await fetch(`${UrlApi}/${KetApi}`);
+const data: ApiData = await response.json();
+
+//filtrar para obtener la section de blocks
+const dataBlocks = data?.sectionsHomeAbout.filter(
+  (section: SectionsHomeAbout) => section.section === "blocks",
+);
+---
+
+<Layout
+  title={`${data.name} | Gallery`}
+  description={dataBlocks[3]?.text}
+  favicon={data.logos.primary}
+  featuredImage={data.logos.favicon}
+  keywords={data.services.map((service) => service.title).join(", ")}
+>
+  <TransparentHeader
+    bgImages={dataBlocks[3]?.additionalImages[0]}
+    title={dataBlocks[3]?.title || "Gallery"}
+    client:load
+  />
+  <div class="pt-10 w-4/5 mx-auto mb-20">
+    <h2 class="text-center text-5xl font-bold mt-10 mb-5">Our Gallery</h2>
+
+    <div >
+      <GalleryBA  BeforeAfter={data.beforeAfter} client:load/>
+    </div>
+    <div class="py-10">
+      <GalleryComponent dataGallery={data.gallery} LandingsGallery={data.landingsGallery} client:load />
+    </div>
+  </div>
+</Layout>

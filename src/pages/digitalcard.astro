@@ -1,0 +1,33 @@
+---
+import type { ApiData } from "@/interfaces/dbData";
+import BussinessCard from "@/components/businessCard/BusinessCard";
+
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+// Realiza la llamada a la API
+const response = await fetch(`${UrlApi}/${KetApi}`);
+const data: ApiData = await response.json();
+---
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href={data.logos.primary} />
+    <meta name="generator" content={Astro.generator} />
+    <title>{data.name} | Digital Card</title>
+
+    <meta property="og:type" content="website" />
+
+    <link href="/assets/css/style.css" rel="stylesheet" />
+    <!-- Font Awesome -->
+    <link
+        href="https://cdn.jsdelivr.net/gh/yader316/cdn-font-pro@main/fontawesome-pro-6.5.2-web/css/all.min.css"
+        rel="stylesheet"
+    />
+</head>
+
+<div
+    class="w-full h-full min-h-screen bg-gray-200 bg-gradient-to-tr flex items-center justify-center p-4"
+>
+    <BussinessCard client:load data={data} />
+</div>

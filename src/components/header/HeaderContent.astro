@@ -1,0 +1,71 @@
+---
+import type { ApiData } from "../../interfaces/dbData";
+import { MenuHeader } from "./MenuHeader";
+
+let UrlApi = import.meta.env.API_URL;
+let KetApi = import.meta.env.API_KEY;
+// Realiza la llamada a la API
+const response = await fetch(`${UrlApi}/${KetApi}`);
+const data: ApiData = await response.json();
+
+const onePages = data.widgets.onePages;
+
+let open = false
+---
+
+<header class={` absolute z-30 w-full`} transition:animate="none">
+
+  <div class="flex justify-between">
+    <div class="w-full lg:w-[90%] mx-auto lg:ml-auto">
+      <div class="w-full flex items-center justify-end md:justify-start px-5">
+        {
+          onePages ? (
+            <div class="hidden md:flex flex-wrap gap-8 items-center justify-center px-5">
+              {data?.dataGeneral?.phones.slice(0,2).map((phone) => (
+                <div class="flex items-center gap-2">
+                  <span class="bg-btnColor text-white px-3.5 py-2.5 rounded-full">
+                    <i class="fa-solid fa-phone-volume" />
+                  </span>
+                  <div>
+                    <p class="text-[#4D4D4D] font-semibold">
+                      {phone.title.length > 0 ? phone.title : "Phone"}
+                    </p>
+                    <a
+                      href={`tel:${phone.number}`}
+                      class="text-primary font-bold text-lg transition-all duration-300 ease-in-out hover:text-tertiary"
+                      aria-label="Phone number"
+                    >
+                      <span>{phone.number}</span>
+                    </a>
+                  </div>
+                </div>
+              ))}
+              {
+                data?.dataGeneral?.openingHours.slice(0,3).map((hour) => (
+                  <div class="flex items-center gap-2">
+                    <span class="bg-btnColor text-white px-3.5 py-2.5 rounded-full">
+                      <i class="fa-regular fa-calendar-clock"></i>
+                    </span>
+                    <div>
+                      <p class="text-[#4D4D4D] font-semibold capitalize">
+                        {hour.days}
+                      </p>
+                      <p class="text-primary font-bold text-lg capitalize">
+                        {hour.hours}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          ) : (
+            <div class="flex items-center justify-center lg:justify-between px-3 mt-8 lg:px-16">
+              <MenuHeader client:load data={data} textColors="text-white"/>
+            </div>
+          )
+        }
+      </div>
+    </div>
+
+  </div>
+</header>
