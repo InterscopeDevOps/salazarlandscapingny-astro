@@ -13,6 +13,7 @@ import LazyImage from "@/components/LazyImage";
 import AreasBlockOne from "@/components/Blocks/areas-we-serve/AreasBlockOne";
 import VideoSection from "@/components/VideoSection";
 import ServicesByLocation from "@/components/areas/ServiceByLocation";
+import PostComponent from "@/components/PostComponent";
 
 let UrlApi = import.meta.env.API_URL;
 let KetApi = import.meta.env.API_KEY;
@@ -90,7 +91,7 @@ const onePages = data.widgets.onePages;
       />
     ) : null
   }
-  <!-- <Emblems nameCompany={nameCompany} data={data} client:load /> -->
+  <PostComponent dataBlocks={dataBlocks} widgetActive={data.widgets.post} client:load />
   <ServicesByLocation data={data} client:load />
   <SocialMediaHome dataGlobal={data} client:load />
 
